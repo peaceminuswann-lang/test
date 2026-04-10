@@ -1,0 +1,3473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FY Navdoc & Tech Dashboard</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://mefobbecnrgleyuimsld.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Kl-0wxh6IDu_m5HTJEutqQ_q-vXu7e7';
+        
+        // Initialize Supabase
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Make client available globally
+        window.supabase = supabaseClient;
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .navbar {
+            display: none;
+        }
+
+        .dashboard-shell {
+            display: flex;
+            min-height: 100vh;
+            background: #f5f7fa;
+        }
+
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: linear-gradient(135deg, #ff8c00 0%, #ffb74d 50%, #ff9f1a 100%);
+            color: #ffffff;
+            padding: 40px 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            transition: width 0.3s ease, transform 0.3s ease;
+            position: relative;
+            box-shadow: 8px 0 30px rgba(255, 140, 0, 0.2);
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            padding: 30px 0;
+            overflow: hidden;
+        }
+
+        .sidebar-toggle {
+            position: fixed;
+            left: 10px;
+            top: 15px;
+            z-index: 1050;
+            background: rgba(255, 140, 0, 0.2);
+            border: 2px solid rgba(255, 140, 0, 0.3);
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: rgba(255, 140, 0, 0.8);
+            border-color: rgba(255, 140, 0, 1);
+        }
+
+        .sidebar-toggle i {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-brand img {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.85);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .sidebar-section {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            opacity: 0.85;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+
+        .sidebar-item {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-item::before {
+            content: '';
+            position: absolute;
+            left: -100%;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.15);
+            transition: left 0.3s ease;
+            z-index: 0;
+        }
+
+        .sidebar-item > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-weight: 700;
+            transform: translateX(4px);
+        }
+
+        .sidebar-item:hover::before,
+        .sidebar-item.active::before {
+            left: 0;
+        }
+
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .sidebar-subsection {
+            color: #91a4ff;
+            font-size: 0.95rem;
+            padding-left: 14px;
+            margin: 12px 0 8px;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.65);
+            line-height: 1.7;
+        }
+
+        .dashboard-main {
+            flex: 1;
+            padding: 40px 40px;
+            background: linear-gradient(135deg, rgba(245, 247, 250, 0.5) 0%, rgba(233, 236, 241, 0.3) 100%);
+            position: relative;
+        }
+
+        .dashboard-main::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -20%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(255, 140, 0, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .dashboard-main > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .dashboard-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .topbar-logo {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            flex-shrink: 0;
+        }
+
+        .topbar-logo img {
+            width: 120px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 480px;
+            background: #ffffff;
+            border: 1px solid #dfe3ea;
+            border-radius: 18px;
+            padding: 12px 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        .search-box i {
+            color: #7f8fa8;
+            font-size: 1rem;
+        }
+
+        .search-box input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 0.95rem;
+            color: #1e2a47;
+            background: transparent;
+        }
+
+        .user-card {
+            text-align: right;
+            font-size: 0.9rem;
+            color: #1e2a47;
+        }
+
+        .user-card strong {
+            display: block;
+            font-size: 1rem;
+            color: #0f1f45;
+        }
+
+        .topbar-btn {
+            border-radius: 14px;
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            color: #1f2b44;
+            border-color: #dfe3ea;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(15, 22, 51, 0.06);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .main-content {
+            background: transparent;
+            border-radius: 0;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        .page-title-container {
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .page-title-container .dashboard-hero {
+            margin-bottom: 0;
+        }
+
+        .dashboard-hero {
+            text-align: left;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .dashboard-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            letter-spacing: -0.06em;
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+            margin: 0;
+        }
+
+        .dashboard-hero p {
+            font-size: 1.05rem;
+            color: #7f8fa8;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .launcher-subtitle {
+            font-size: 1.05rem;
+            color: #7f8fa8;
+            font-weight: 500;
+            margin: 0 0 40px 0;
+            animation: fadeInDown 0.6s ease 0.2s both;
+        }
+
+        .analysis-header {
+            position: relative;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .analysis-title-section {
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease;
+            text-align: center;
+            flex: 1;
+        }
+
+        .analysis-page-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin: 0;
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        .btn-back-home {
+            position: relative;
+            top: 0;
+            right: 0;
+            border-radius: 12px;
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            color: #666;
+            border: 1.5px solid #ddd;
+            background: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back-home:hover {
+            color: #ff8c00;
+            border-color: #ff8c00;
+            background: rgba(255, 140, 0, 0.05);
+            transform: translateX(-3px);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .my-apps-section {
+            animation: fadeInUp 0.6s ease 0.1s both;
+        }
+
+        .my-apps-section h2 {
+            font-size: 2.1rem;
+            margin-bottom: 2rem;
+            font-weight: 800;
+            color: #1f2b44;
+            position: relative;
+            padding-bottom: 12px;
+        }
+
+        .my-apps-section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 5px;
+            background: linear-gradient(90deg, #ff8c00, #ffb74d);
+            border-radius: 3px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .app-card {
+            border-radius: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            background: #ffffff;
+            border: 2px solid #e9ecf1;
+            position: relative;
+            overflow: hidden;
+            display: block;
+            height: 100%;
+        }
+
+        .app-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff8c00, #ffb74d, #ff9f1a);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .app-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(255, 140, 0, 0.2);
+            border-color: #ff8c00;
+        }
+
+        .app-card:hover::before {
+            opacity: 1;
+        }
+
+        .app-card-icon {
+            width: 56px;
+            height: 56px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-card:hover .app-card-icon {
+            transform: scale(1.15) rotate(5deg);
+        }
+
+        .app-card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1f2b44;
+            margin-bottom: 0.2rem;
+        }
+
+        .app-card-text {
+            color: #666;
+            margin-bottom: 0;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Delay Code Analysis Styles */
+        .delay-controls {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .delay-controls .form-select {
+            width: 150px;
+            border-radius: 10px;
+            border: 1.5px solid #ddd;
+            padding: 8px 12px;
+            font-size: 0.95rem;
+        }
+
+        .delay-metrics-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        
+        .delay-metrics-container .row {
+            width: 100%;
+            margin: 0;
+        }
+        
+        .delay-metrics-container .col-md-3 {
+            display: flex;
+            justify-content: center;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fb 100%);
+            border: 2px solid #e9ecf1;
+            border-radius: 16px;
+            padding: 24px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff8c00, #ffb74d);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(255, 140, 0, 0.15);
+            border-color: #ff8c00;
+        }
+
+        .metric-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #7f8fa8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #ff8c00;
+            line-height: 1.3;
+            word-wrap: break-word;
+            word-break: break-word;
+            hyphens: auto;
+        }
+
+        .chart-box {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e9ecf1;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1f2b44;
+            margin-bottom: 20px;
+        }
+
+        .chart-box canvas {
+            max-height: 350px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1f2b44;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #ff8c00;
+            display: inline-block;
+        }
+
+        .delay-table {
+            border-collapse: collapse;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .delay-table thead {
+            background: linear-gradient(135deg, #ff8c00 0%, #ffb74d 100%);
+            color: white;
+        }
+
+        .delay-table th {
+            padding: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .delay-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.95rem;
+        }
+
+        .delay-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .delay-table tbody tr:hover {
+            background-color: rgba(255, 140, 0, 0.08);
+        }
+
+        .delay-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 240px;
+                padding: 30px 15px;
+            }
+
+            .dashboard-main {
+                padding: 24px 20px;
+            }
+
+            .dashboard-hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .my-apps-section h2 {
+                font-size: 1.7rem;
+            }
+        }
+
+        /* Responsive Delay Analysis */
+        @media (max-width: 1024px) {
+            .delay-metrics-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-box canvas {
+                max-height: 300px;
+            }
+
+            .delay-controls .form-select {
+                width: 120px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                padding: 25px 12px;
+            }
+
+            .dashboard-main {
+                padding: 20px;
+            }
+
+            .dashboard-topbar {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .dashboard-hero {
+                margin-bottom: 30px;
+            }
+
+            .dashboard-hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .my-apps-section h2 {
+                font-size: 1.5rem;
+            }
+
+            .app-card {
+                border-radius: 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 180px;
+                padding: 20px 10px;
+            }
+
+            .dashboard-main {
+                padding: 16px;
+            }
+
+            .dashboard-hero h1 {
+                font-size: 1.5rem;
+            }
+
+            .my-apps-section {
+                margin-bottom: 30px;
+            }
+
+            .my-apps-section h2 {
+                font-size: 1.3rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .app-card {
+                border-radius: 14px;
+            }
+
+            .app-card p {
+                font-size: 0.9rem;
+            }
+
+            .topbar-btn {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+
+            .sidebar-title {
+                font-size: 0.95rem;
+            }
+
+            .sidebar-item {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+
+            /* Delay Analysis Mobile */
+            .delay-controls {
+                padding: 16px 12px;
+            }
+
+            .delay-controls .form-select {
+                width: 100px;
+                font-size: 0.85rem;
+                padding: 6px 8px;
+            }
+
+            .delay-metrics-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .metric-card {
+                padding: 16px 12px;
+            }
+
+            .metric-label {
+                font-size: 0.8rem;
+                margin-bottom: 8px;
+            }
+
+            .metric-value {
+                font-size: 1.8rem;
+            }
+
+            .delay-table th {
+                padding: 12px 8px;
+                font-size: 0.75rem;
+            }
+
+            .delay-table td {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+            }
+
+            .chart-title {
+                font-size: 0.95rem;
+                margin-bottom: 12px;
+            }
+
+            .chart-box {
+                padding: 16px;
+            }
+
+            .chart-box canvas {
+                max-height: 250px;
+            }
+
+            .section-title {
+                font-size: 1rem;
+                margin-bottom: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin: 10px;
+                padding: 16px;
+                border-radius: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                margin: 5px;
+                padding: 12px;
+                border-radius: 10px;
+            }
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+        }
+
+        .app-card {
+            border-radius: 20px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            background: #ffffff;
+        }
+
+        .app-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px rgba(0,0,0,0.12);
+        }
+
+        .app-card-icon {
+            width: 46px;
+            height: 46px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+
+        .app-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .app-card-text {
+            color: #5f4a1e;
+            margin-bottom: 0;
+        }
+
+        .dashboard-hero h1 {
+            font-size: 2.6rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+        }
+
+        .my-apps-section h2 {
+            font-size: 2.1rem;
+            margin-bottom: 2rem;
+            font-weight: 800;
+            color: #1f2b44;
+            position: relative;
+            padding-bottom: 12px;
+        }
+
+        .my-apps-section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 5px;
+            background: linear-gradient(90deg, #ff8c00, #ffb74d);
+            border-radius: 3px;
+        }
+
+        .row.g-4 {
+            row-gap: 2rem;
+        }
+
+        .col-md-6.col-xl-3 {
+            animation: fadeInUp 0.5s ease both;
+        }
+
+        .col-md-6.col-xl-3:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .col-md-6.col-xl-3:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .col-md-6.col-xl-3:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .col-md-6.col-xl-3:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        .app-card.card {
+            padding: 1.75rem !important;
+        }
+
+        .app-card .d-flex {
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .app-card small {
+            font-weight: 500;
+            color: #ff8c00;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #ff8c00 0%, #ffb74d 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            border: none;
+            font-weight: 700;
+        }
+
+        .chart-container canvas {
+            max-height: 300px;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container canvas {
+                max-height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chart-container canvas {
+                max-height: 200px;
+            }
+        }
+
+        .table-responsive {
+            border-radius: 10px;
+            overflow-x: auto;
+            overflow-y: visible;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-responsive table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .table {
+            table-layout: auto;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .table th,
+        .table td {
+            white-space: nowrap;
+            padding: 12px 10px;
+            font-size: 0.9rem;
+        }
+
+        .table th {
+            font-weight: 700;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(255, 140, 0, 0.05);
+        }
+
+        @media (max-width: 1024px) {
+            .table th,
+            .table td {
+                padding: 10px 8px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .table-responsive {
+                border-radius: 8px;
+            }
+
+            .table th,
+            .table td {
+                padding: 8px 6px;
+                font-size: 0.8rem;
+            }
+
+            .table th {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .table-responsive {
+                border-radius: 6px;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+            }
+
+            .table th,
+            .table td {
+                padding: 6px 4px;
+                font-size: 0.75rem;
+            }
+        }
+
+        .delayed {
+            background-color: #ffe6e6 !important;
+        }
+
+        .btn-admin {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff9f1a 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 22px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+            color: white;
+        }
+
+        .brand-logo {
+            width: 48px;
+            height: auto;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.95);
+            padding: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .dashboard-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.15rem;
+            line-height: 1.2;
+        }
+
+        .dashboard-subtitle {
+            font-size: 0.95rem;
+            color: #7f4f00;
+            font-weight: 600;
+        }
+
+        .bg-orange-light {
+            background: rgba(255, 240, 210, 0.9);
+        }
+
+        .nav-pills .nav-link.active,
+        .nav-pills .show>.nav-link {
+            background: #ff8c00;
+            border-color: #ff8c00;
+            color: #fff;
+        }
+
+        .nav-pills .nav-link {
+            color: #7f4f00;
+        }
+
+        .nav-pills .nav-link:hover {
+            background: #ffc05a;
+            color: #fff;
+        }
+
+        h2 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        .stats-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .fuel-savings-hero {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff9f1a 50%, #ffb74d 100%);
+            border-radius: 25px;
+            padding: 60px 50px;
+            color: white;
+            box-shadow: 0 20px 60px rgba(255, 140, 0, 0.35), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            margin-bottom: 45px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        @media (max-width: 768px) {
+            .fuel-savings-hero {
+                padding: 40px 30px;
+                margin-bottom: 30px;
+                border-radius: 18px;
+            }
+
+            .fuel-savings-hero .hero-percentage {
+                font-size: 4rem;
+                margin: 15px 0 10px 0;
+            }
+
+            .fuel-savings-hero .hero-label {
+                font-size: 1.1rem;
+                letter-spacing: 1px;
+                margin-bottom: 10px;
+            }
+
+            .fuel-savings-hero .fuel-saved-text {
+                font-size: 1rem;
+                margin-bottom: 20px;
+            }
+
+            .fuel-savings-hero .hero-details {
+                gap: 15px;
+                margin-top: 25px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .fuel-savings-hero {
+                padding: 25px 15px;
+                margin-bottom: 20px;
+                border-radius: 12px;
+            }
+
+            .fuel-savings-hero .hero-percentage {
+                font-size: 2.5rem;
+                margin: 10px 0 8px 0;
+            }
+
+            .fuel-savings-hero .hero-label {
+                font-size: 0.9rem;
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+            }
+
+            .fuel-savings-hero .hero-label i {
+                font-size: 1.2rem;
+            }
+
+            .fuel-savings-hero .fuel-saved-text {
+                font-size: 0.85rem;
+                margin-bottom: 15px;
+            }
+
+            .fuel-savings-hero .hero-details {
+                gap: 10px;
+                margin-top: 15px;
+                flex-direction: column;
+            }
+        }
+
+        .fuel-savings-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .fuel-savings-hero::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.05) 100%);
+            pointer-events: none;
+            border-radius: 25px;
+        }
+
+        .fuel-savings-hero:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 28px 80px rgba(255, 140, 0, 0.4), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .fuel-savings-hero .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .fuel-savings-hero .hero-percentage {
+            font-size: 5.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 25px 0 15px 0;
+            text-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+            letter-spacing: -1px;
+        }
+
+        .fuel-savings-hero .hero-label {
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 1;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .fuel-savings-hero .hero-label i {
+            font-size: 1.8rem;
+        }
+
+        .fuel-savings-hero .fuel-saved-text {
+            font-size: 1.25rem;
+            font-weight: 500;
+            opacity: 0.95;
+            margin-bottom: 35px;
+            letter-spacing: 0.5px;
+        }
+
+        .fuel-savings-hero .hero-details {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .fuel-savings-detail-box {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(15px);
+            border-radius: 16px;
+            padding: 28px 35px;
+            border: 1.5px solid rgba(255, 255, 255, 0.35);
+            min-width: 220px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .fuel-savings-detail-box:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .fuel-savings-detail-box .detail-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .fuel-savings-detail-box .detail-value {
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin: 10px 0;
+            line-height: 1;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .fuel-savings-detail-box .detail-subtext {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .fuel-savings-table-container {
+            overflow-x: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .fuel-savings-table-container table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .fuel-savings-metrics-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .fuel-savings-table {
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            max-width: 550px;
+            width: 100%;
+            table-layout: auto;
+            word-wrap: break-word;
+        }
+
+        .fuel-savings-table thead {
+            background: linear-gradient(135deg, #ff8c00 0%, #ffb74d 100%);
+            color: white;
+        }
+
+        .fuel-savings-table th {
+            padding: 18px 25px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.95rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .fuel-savings-table td {
+            padding: 16px 25px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 1024px) {
+            .fuel-savings-table th {
+                padding: 14px 18px;
+                font-size: 0.85rem;
+                letter-spacing: 0.5px;
+            }
+
+            .fuel-savings-table td {
+                padding: 12px 16px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .fuel-savings-table th {
+                padding: 12px 12px;
+                font-size: 0.8rem;
+                letter-spacing: 0;
+            }
+
+            .fuel-savings-table td {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .fuel-savings-table th {
+                padding: 10px 8px;
+                font-size: 0.7rem;
+            }
+
+            .fuel-savings-table td {
+                padding: 8px 8px;
+                font-size: 0.7rem;
+            }
+        }
+
+        .fuel-savings-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .fuel-savings-table tbody tr:hover {
+            background-color: rgba(255, 140, 0, 0.08);
+        }
+
+        .fuel-savings-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .fuel-savings-table .period-name {
+            text-align: left;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .fuel-savings-table .savings-value {
+            color: #ff8c00;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .fuel-savings-table .savings-value.zero {
+            color: #999;
+        }
+
+        .fuel-savings-table-horizontal {
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            table-layout: auto;
+            word-wrap: break-word;
+        }
+
+        .fuel-savings-table-horizontal thead {
+            background: linear-gradient(135deg, #ff8c00 0%, #ffb74d 100%);
+            color: white;
+        }
+
+        .fuel-savings-table-horizontal th {
+            padding: 18px 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .fuel-savings-table-horizontal th:last-child {
+            border-right: none;
+        }
+
+        .fuel-savings-table-horizontal td {
+            padding: 16px 15px;
+            text-align: center;
+            border-right: 1px solid #f0f0f0;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .fuel-savings-table-horizontal td:last-child {
+            border-right: none;
+        }
+
+        @media (max-width: 1024px) {
+            .fuel-savings-table-horizontal th {
+                padding: 14px 12px;
+                font-size: 0.85rem;
+                letter-spacing: 0.5px;
+            }
+
+            .fuel-savings-table-horizontal td {
+                padding: 12px 12px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .fuel-savings-table-horizontal th {
+                padding: 12px 8px;
+                font-size: 0.8rem;
+                letter-spacing: 0;
+                border-right: none;
+            }
+
+            .fuel-savings-table-horizontal td {
+                padding: 10px 8px;
+                font-size: 0.8rem;
+                border-right: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .fuel-savings-table-horizontal th {
+                padding: 8px 6px;
+                font-size: 0.7rem;
+            }
+
+            .fuel-savings-table-horizontal td {
+                padding: 6px 6px;
+                font-size: 0.7rem;
+            }
+        }
+
+        .fuel-savings-table-horizontal tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .fuel-savings-table-horizontal tbody tr:hover {
+            background-color: rgba(255, 140, 0, 0.08);
+        }
+
+        .fuel-savings-table-horizontal .savings-value {
+            color: #ff8c00;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .fuel-savings-table-horizontal .savings-value.zero {
+            color: #999;
+        }
+
+        /* Hide Fuel by Route and Fuel Statistics sections */
+        .col-lg-6:has(#fuelByRouteChart),
+        .col-lg-6:has(#fuelStatsChart) {
+            display: none !important;
+        }
+
+        /* Responsive CSS for Navbar and Dashboard */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 12px 0;
+            }
+
+            .navbar-brand {
+                font-size: 0.9rem;
+            }
+
+            .dashboard-title {
+                font-size: 0.95rem;
+            }
+
+            .dashboard-subtitle {
+                font-size: 0.8rem;
+            }
+
+            .brand-logo {
+                max-width: 40px;
+                height: auto;
+            }
+
+            .navbar-nav {
+                flex-direction: row;
+                gap: 8px;
+            }
+
+            .btn-admin, .btn-outline-light {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+
+            .nav-pills .nav-link {
+                font-size: 0.85rem;
+                padding: 8px 12px;
+            }
+
+            .d-flex.gap-3 {
+                gap: 0.5rem !important;
+                flex-wrap: wrap;
+            }
+
+            .form-label {
+                font-size: 0.8rem;
+                margin-bottom: 4px;
+            }
+
+            .form-select.d-inline-block {
+                font-size: 0.85rem;
+                padding: 6px 8px;
+            }
+
+            /* Detail Boxes and Tables */
+            .fuel-savings-detail-box {
+                min-width: 160px;
+                padding: 20px 20px;
+                border-radius: 12px;
+            }
+
+            .fuel-savings-detail-box .detail-label {
+                font-size: 0.7rem;
+                letter-spacing: 0.5px;
+                margin-bottom: 8px;
+            }
+
+            .fuel-savings-detail-box .detail-value {
+                font-size: 2rem;
+                margin: 8px 0;
+            }
+
+            .fuel-savings-detail-box .detail-subtext {
+                font-size: 0.65rem;
+                margin-top: 5px;
+            }
+
+            .fuel-savings-table {
+                max-width: 100%;
+                font-size: 0.9rem;
+            }
+
+            .fuel-savings-table th {
+                padding: 12px 15px;
+                font-size: 0.8rem;
+            }
+
+            .fuel-savings-table td {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+
+            .fuel-savings-table-horizontal th {
+                padding: 12px 10px;
+                font-size: 0.75rem;
+            }
+
+            .fuel-savings-table-horizontal td {
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+
+            .fuel-savings-table-horizontal .period-name {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar {
+                padding: 10px 0;
+            }
+
+            .navbar-brand {
+                font-size: 0.75rem;
+            }
+
+            .dashboard-title {
+                font-size: 0.8rem;
+            }
+
+            .dashboard-subtitle {
+                font-size: 0.7rem;
+                font-weight: 600;
+            }
+
+            .brand-logo {
+                max-width: 32px;
+                height: auto;
+            }
+
+            .navbar-nav {
+                gap: 6px;
+            }
+
+            .btn-admin, .btn-outline-light {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+
+            .btn-admin i, .btn-outline-light i {
+                margin-right: 4px;
+            }
+
+            .nav-pills .nav-link {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+
+            .d-flex.gap-3 {
+                gap: 0.25rem !important;
+                flex-direction: column !important;
+            }
+
+            .d-flex.gap-3 > div {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .form-label {
+                font-size: 0.7rem;
+                margin-bottom: 3px;
+            }
+
+            .form-select.d-inline-block {
+                font-size: 0.8rem;
+                padding: 5px 6px;
+                width: 100% !important;
+                display: block !important;
+            }
+
+            /* Detail Boxes for Mobile */
+            .fuel-savings-detail-box {
+                min-width: 130px;
+                padding: 15px 12px;
+                border-radius: 10px;
+            }
+
+            .fuel-savings-detail-box .detail-label {
+                font-size: 0.65rem;
+                letter-spacing: 0px;
+                margin-bottom: 6px;
+            }
+
+            .fuel-savings-detail-box .detail-value {
+                font-size: 1.5rem;
+                margin: 6px 0;
+            }
+
+            .fuel-savings-detail-box .detail-subtext {
+                font-size: 0.6rem;
+                margin-top: 4px;
+            }
+
+            /* Tables for Mobile */
+            .fuel-savings-table {
+                max-width: 100%;
+                font-size: 0.8rem;
+            }
+
+            .fuel-savings-table th {
+                padding: 10px 8px;
+                font-size: 0.7rem;
+                letter-spacing: 0px;
+            }
+
+            .fuel-savings-table td {
+                padding: 10px 8px;
+                font-size: 0.8rem;
+            }
+
+            .fuel-savings-table .period-name {
+                text-align: left;
+            }
+
+            .fuel-savings-table-horizontal th {
+                padding: 10px 5px;
+                font-size: 0.65rem;
+                letter-spacing: 0px;
+            }
+
+            .fuel-savings-table-horizontal td {
+                padding: 10px 5px;
+                font-size: 0.8rem;
+            }
+
+            .fuel-savings-table-horizontal .period-name {
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Footer Styles */
+        .dashboard-footer {
+            margin-top: 80px;
+            padding: 40px 20px;
+            text-align: center;
+            border-top: 1px solid #e9ecf1;
+            color: #7f8fa8;
+            font-size: 0.95rem;
+            background: rgba(255, 140, 0, 0.02);
+        }
+
+        .dashboard-footer p {
+            margin: 0;
+        }
+
+        .dashboard-footer .footer-text-bold {
+            font-weight: 600;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-shell" id="dashboardShell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="firefly-logo.png" alt="FY Navdoc Logo">
+                <div>
+                    <div class="sidebar-title">FY Navdoc & Tech</div>
+                    <div class="sidebar-subtitle">Dashboard</div>
+                </div>
+            </div>
+            <div>
+                <div class="sidebar-section">Dashboard</div>
+                <a href="javascript:void(0);" id="nav-myapps" class="sidebar-item active" onclick="showLauncher()">My Apps</a>
+                <a href="javascript:void(0);" id="nav-fuel" class="sidebar-item" onclick="showFuelAnalysis()">Fuel Analysis</a>
+                <a href="javascript:void(0);" id="nav-delay" class="sidebar-item" onclick="showDelayCodeAnalysis()">Delay Code Analysis</a>
+                <a href="javascript:void(0);" id="nav-database" class="sidebar-item" onclick="showDatabase()">Database</a>
+                <a href="javascript:void(0);" id="nav-willaddlater" class="sidebar-item" onclick="showWillAddLater()">Will add later</a>
+            </div>
+        </aside>
+
+        <main class="dashboard-main">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="dashboard-topbar">
+                <div class="topbar-logo">
+                <img src="firefly-logo.png" alt="Firefly Logo">
+            </div>
+            <div class="topbar-actions d-flex align-items-center gap-3">
+                    <button class="btn topbar-btn btn-outline-secondary" onclick="window.location.href='login.html'">
+                        Admin Login
+                    </button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="page-title-container mb-4">
+                    <div class="dashboard-hero">
+                        <h1 id="pageTitle">FY Navdoc & Tech Dashboard</h1>
+                        <p id="pageSubtitle" style="display: none;"></p>
+                    </div>
+                </div>
+
+                <div id="launcherSection">
+                    <div id="launcherHero">
+                        <p class="launcher-subtitle">by Flight Operations, Technical & Development</p>
+                    </div>
+
+                    <div class="my-apps-section mb-5">
+                        <h2 class="mb-4">My Apps</h2>
+                        <div class="row g-4">
+                            <div class="col-md-6 col-xl-3">
+                                <a href="javascript:void(0);" onclick="showFuelAnalysis()" class="app-card card text-decoration-none text-dark p-4 h-100">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="app-card-icon bg-warning text-white rounded-circle me-3">
+                                            <i class="fas fa-gas-pump"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="app-card-title mb-1">Fuel Analysis</h5>
+                                            <small class="text-muted">View fuel performance and savings</small>
+                                        </div>
+                                    </div>
+                                    <p class="app-card-text">Open the fuel analysis dashboard built for operations and technical review.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <a href="javascript:void(0);" onclick="showDelayCodeAnalysis()" class="app-card card text-decoration-none text-dark p-4 h-100">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="app-card-icon bg-warning text-white rounded-circle me-3">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="app-card-title mb-1">Delay Code Analysis</h5>
+                                            <small class="text-muted">Analyze delay codes and root causes</small>
+                                        </div>
+                                    </div>
+                                    <p class="app-card-text">View detailed breakdown of departure and arrival delay codes with historical analysis.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <a href="javascript:void(0);" onclick="showDatabase()" class="app-card card text-dark p-4 h-100">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="app-card-icon bg-secondary text-white rounded-circle me-3">
+                                            <i class="fas fa-database"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="app-card-title mb-1">Database</h5>
+                                            <small class="text-muted">Layout coming soon</small>
+                                        </div>
+                                    </div>
+                                    <p class="app-card-text">Access the database interface for flight data and operational records.</p>
+                                </a>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <a href="javascript:void(0);" onclick="showWillAddLater()" class="app-card card text-dark p-4 h-100">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="app-card-icon bg-secondary text-white rounded-circle me-3">
+                                            <i class="fas fa-plus"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="app-card-title mb-1">Will add later</h5>
+                                            <small class="text-muted">Future app</small>
+                                        </div>
+                                    </div>
+                                    <p class="app-card-text">A new dashboard module will be added in the next update.</p>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="delayCodeContent" style="display: none;">
+                    <div class="analysis-header mb-5">
+                        <div class="analysis-title-section">
+                            <h2 id="delayAnalysisTitleDisplay" class="analysis-page-title">
+                                Delay Code Analysis – <span id="delayPeriodTitle">January 2026</span>
+                            </h2>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-back-home" onclick="showLauncher()">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Home
+                        </button>
+                    </div>
+
+                    <!-- Period Tabs -->
+                    <ul class="nav nav-pills justify-content-center mb-4" id="delayPeriodTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="delay-monthly-tab" data-bs-toggle="pill" data-bs-target="#delay-monthly" type="button" role="tab" aria-controls="delay-monthly" aria-selected="true" onclick="setDelayPeriod('monthly')">Monthly</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="delay-quarterly-tab" data-bs-toggle="pill" data-bs-target="#delay-quarterly" type="button" role="tab" aria-controls="delay-quarterly" aria-selected="false" onclick="setDelayPeriod('quarterly')">Quarterly</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="delay-yearly-tab" data-bs-toggle="pill" data-bs-target="#delay-yearly" type="button" role="tab" aria-controls="delay-yearly" aria-selected="false" onclick="setDelayPeriod('yearly')">Yearly</button>
+                        </li>
+                    </ul>
+
+                    <!-- Fleet & Period Selectors -->
+                    <div class="delay-controls mb-4">
+                        <div class="d-flex justify-content-center gap-4 flex-wrap">
+                            <div>
+                                <label class="form-label me-2">Fleet:</label>
+                                <select class="form-select d-inline-block" id="delayFleetSelect" onchange="updateDelayAnalysis()">
+                                    <option value="b737">B737</option>
+                                    <option value="atr72">ATR72</option>
+                                    <option value="both">Both</option>
+                                </select>
+                            </div>
+                            <div id="delayMonthSelector">
+                                <label class="form-label me-2">Month:</label>
+                                <select class="form-select d-inline-block" id="delayMonthSelect" onchange="updateDelayAnalysis()">
+                                    <option value="01">January</option>
+                                    <option value="02">February</option>
+                                    <option value="03">March</option>
+                                    <option value="04">April</option>
+                                    <option value="05">May</option>
+                                    <option value="06">June</option>
+                                    <option value="07">July</option>
+                                    <option value="08">August</option>
+                                    <option value="09">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div id="delayQuarterSelector" style="display: none;">
+                                <label class="form-label me-2">Quarter:</label>
+                                <select class="form-select d-inline-block" id="delayQuarterSelect" onchange="updateDelayAnalysis()">
+                                    <option value="1">Q1 (Jan-Mar)</option>
+                                    <option value="2">Q2 (Apr-Jun)</option>
+                                    <option value="3">Q3 (Jul-Sep)</option>
+                                    <option value="4">Q4 (Oct-Dec)</option>
+                                </select>
+                            </div>
+                            <div id="delayYearSelector">
+                                <label class="form-label me-2">Year:</label>
+                                <select class="form-select d-inline-block" id="delayYearSelect" onchange="updateDelayAnalysis()"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Container -->
+                    <div class="row mb-5">
+                        <div class="col-lg-6">
+                            <div class="chart-box">
+                                <h5 class="chart-title">Departure Delay Codes Distribution</h5>
+                                <canvas id="depDelayChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="chart-box">
+                                <h5 class="chart-title">Arrival Delay Codes Distribution</h5>
+                                <canvas id="arrDelayChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bar Charts Container -->
+                    <div class="row mb-5">
+                        <div class="col-lg-6">
+                            <div class="chart-box">
+                                <h5 class="chart-title">Departure Delay Codes (Bar Chart)</h5>
+                                <canvas id="depDelayBarChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="chart-box">
+                                <h5 class="chart-title">Arrival Delay Codes (Bar Chart)</h5>
+                                <canvas id="arrDelayBarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics -->
+                    <div class="delay-metrics-container mb-5">
+                        <div class="row g-3 justify-content-center">
+                            <div class="col-md-3" style="display: none;">
+                                <div class="metric-card">
+                                    <div class="metric-label">Total Delayed Flights</div>
+                                    <div class="metric-value" id="totalDelayedFlights">0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3" style="display: none;">
+                                <div class="metric-card">
+                                    <div class="metric-label">Avg Delay Time</div>
+                                    <div class="metric-value" id="avgDelayTime">0:00</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="metric-card">
+                                    <div class="metric-label">Most Common Dep</div>
+                                    <div class="metric-value" id="mostCommonDep">-</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="metric-card">
+                                    <div class="metric-label">Frequency</div>
+                                    <div class="metric-value" id="depFrequency">-</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="metric-card">
+                                    <div class="metric-label">Most Common Arr</div>
+                                    <div class="metric-value" id="mostCommonArr">-</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="metric-card">
+                                    <div class="metric-label">Frequency</div>
+                                    <div class="metric-value" id="arrFrequency">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Departure Delays Table -->
+                    <div class="mb-5">
+                        <h5 class="section-title">Departure Delays Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover delay-table" id="depDelayTable">
+                                <thead>
+                                    <tr>
+                                        <th>Delay Code</th>
+                                        <th>Highest Delay Reason</th>
+                                        <th>Frequency</th>
+                                        <th>Percentage</th>
+                                        <th>Reason Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Arrival Delays Table -->
+                    <div class="mb-5">
+                        <h5 class="section-title">Arrival Delays Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover delay-table" id="arrDelayTable">
+                                <thead>
+                                    <tr>
+                                        <th>Delay Code</th>
+                                        <th>Highest Delay Reason</th>
+                                        <th>Frequency</th>
+                                        <th>Percentage</th>
+                                        <th>Reason Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sector Analysis with Top Codes -->
+                    <div class="row mb-5">
+                        <!-- Departure Sectors and Codes -->
+                        <div class="col-lg-6">
+                            <div class="mb-5">
+                                <h5 class="section-title">Top 5 Sectors with Highest Delay Code (Dep)</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover delay-table" id="depSectorTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Sector</th>
+                                                <th>Frequency</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="mb-5">
+                                <h5 class="section-title">Top 5 Departure Delay Codes from Top Sectors</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover delay-table" id="topDepCodesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Sector</th>
+                                                <th>Delay Code</th>
+                                                <th>Frequency</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-5">
+                        <!-- Arrival Sectors and Codes -->
+                        <div class="col-lg-6">
+                            <div class="mb-5">
+                                <h5 class="section-title">Top 5 Sectors with Highest Delay Code (Arr)</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover delay-table" id="arrSectorTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Sector</th>
+                                                <th>Frequency</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="mb-5">
+                                <h5 class="section-title">Top 5 Arrival Delay Codes from Top Sectors</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover delay-table" id="topArrCodesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Sector</th>
+                                                <th>Delay Code</th>
+                                                <th>Frequency</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delay Code Reference Section -->
+                    <div class="mb-5">
+                        <h5 class="section-title">Delay Code (Dep) Detailed Breakdown</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover delay-table" id="depDetailedCodeTable">
+                                <thead>
+                                    <tr>
+                                        <th>Delay Code</th>
+                                        <th>Description</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <h5 class="section-title">Delay Code (Arr) Detailed Breakdown</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover delay-table" id="arrDetailedCodeTable">
+                                <thead>
+                                    <tr>
+                                        <th>Delay Code</th>
+                                        <th>Description</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="databaseContent" style="display: none;">
+                    <div class="d-flex justify-content-end align-items-center mb-4">
+                        <button class="btn btn-outline-secondary" onclick="showLauncher()">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Home
+                        </button>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Database</strong> - Layout coming soon. This page will provide access to the database interface for flight data and operational records.
+                    </div>
+                </div>
+
+                <div id="willAddLaterContent" style="display: none;">
+                    <div class="d-flex justify-content-end align-items-center mb-4">
+                        <button class="btn btn-outline-secondary" onclick="showLauncher()">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Home
+                        </button>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Will add later</strong> - A new dashboard module will be added in the next update.
+                    </div>
+                </div>
+                </div>
+
+                <div id="analysisContent" style="display: none;">
+                    <div class="analysis-header mb-5">
+                        <div class="text-center analysis-title-section">
+                            <h2 id="analysisTitleDisplay" class="analysis-page-title">
+                                <span id="fleetTitle">B737</span> Fuel Analysis – <span id="periodTitle">January 2026</span>
+                            </h2>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-back-home" onclick="showLauncher()">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Home
+                        </button>
+                    </div>
+
+        <ul class="nav nav-pills justify-content-center mb-4" id="periodTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="monthly-tab" data-bs-toggle="pill" data-bs-target="#monthly" type="button" role="tab" aria-controls="monthly" aria-selected="true" onclick="setPeriod('monthly')">Monthly</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="quarterly-tab" data-bs-toggle="pill" data-bs-target="#quarterly" type="button" role="tab" aria-controls="quarterly" aria-selected="false" onclick="setPeriod('quarterly')">Quarterly</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="yearly-tab" data-bs-toggle="pill" data-bs-target="#yearly" type="button" role="tab" aria-controls="yearly" aria-selected="false" onclick="setPeriod('yearly')">Yearly</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="periodTabContent">
+            <div class="tab-pane fade show active" id="monthly" role="tabpanel" aria-labelledby="monthly-tab">
+                <div class="d-flex justify-content-center mb-4 gap-3">
+                    <div>
+                        <label class="form-label me-2">Fleet:</label>
+                        <select id="fleetSelector" class="form-select d-inline-block w-auto" onchange="switchFleet(this.value)">
+                            <option value="b737">B737</option>
+                            <option value="atr">ATR72</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label me-2">Month:</label>
+                        <select id="monthSelector" class="form-select d-inline-block w-auto" onchange="switchMonth(this.value)">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label me-2">Year:</label>
+                        <select id="monthlyYearSelector" class="form-select d-inline-block w-auto" onchange="switchMonthlyYear(this.value)">
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="quarterly" role="tabpanel" aria-labelledby="quarterly-tab">
+                <div class="d-flex justify-content-center mb-4 gap-3">
+                    <div>
+                        <label class="form-label me-2">Fleet:</label>
+                        <select id="quarterlyFleetSelector" class="form-select d-inline-block w-auto" onchange="switchFleet(this.value)">
+                            <option value="b737">B737</option>
+                            <option value="atr">ATR72</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label me-2">Quarter:</label>
+                        <select id="quarterSelector" class="form-select d-inline-block w-auto" onchange="switchQuarter(this.value)">
+                            <option value="Q1">Q1 (Jan-Mar)</option>
+                            <option value="Q2">Q2 (Apr-Jun)</option>
+                            <option value="Q3">Q3 (Jul-Sep)</option>
+                            <option value="Q4">Q4 (Oct-Dec)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label me-2">Year:</label>
+                        <select id="quarterlyYearSelector" class="form-select d-inline-block w-auto" onchange="switchQuarterlyYear(this.value)">
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="yearly" role="tabpanel" aria-labelledby="yearly-tab">
+                <div class="d-flex justify-content-center mb-4 gap-3">
+                    <div>
+                        <label class="form-label me-2">Fleet:</label>
+                        <select id="yearlyFleetSelector" class="form-select d-inline-block w-auto" onchange="switchFleet(this.value)">
+                            <option value="b737">B737</option>
+                            <option value="atr">ATR72</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label me-2">Year:</label>
+                        <select id="yearlyYearSelector" class="form-select d-inline-block w-auto" onchange="switchYearlyYear(this.value)">
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fuel-savings-hero">
+            <div class="hero-content">
+                <div class="hero-label">
+                    <i class="fas fa-leaf"></i>FUEL SAVINGS OVERVIEW
+                </div>
+                <div class="hero-percentage" id="heroFuelSavedValue">-</div>
+                <div class="fuel-saved-text">Fuel Saved</div>
+                <div class="hero-details">
+                    <div class="fuel-savings-detail-box">
+                        <div class="detail-label">💾 Total Fuel Savings</div>
+                        <div class="detail-value" id="heroTotalFuelSavings">-</div>
+                        <div class="detail-subtext">(CFP - Actual) kg</div>
+                    </div>
+                    <div class="fuel-savings-detail-box">
+                        <div class="detail-label">🔥 Average Fuel Burn</div>
+                        <div class="detail-value" id="heroAvgFuelBurn">-</div>
+                        <div class="detail-subtext">per Flight (kg)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Fuel Savings Table -->
+        <div id="monthlyTableContainer" class="fuel-savings-table-container" style="display: none; margin-bottom: 40px;">
+            <table class="fuel-savings-table-horizontal">
+                <thead>
+                    <tr id="monthlyHeaderRow"></tr>
+                </thead>
+                <tbody>
+                    <tr id="monthlyFuelSavingsTable"></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Quarterly Fuel Savings Table -->
+        <!-- Quarterly Fuel Savings Table -->
+        <div id="quarterlyTableContainer" class="fuel-savings-table-container" style="display: none; margin-bottom: 40px;">
+            <table class="fuel-savings-table-horizontal">
+                <thead>
+                    <tr id="quarterlyHeaderRow"></tr>
+                </thead>
+                <tbody>
+                    <tr id="quarterlyFuelSavingsTable"></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-calendar-alt me-2"></i>Fuel Uplift Over Time
+                    </div>
+                    <div class="card-body">
+                        <canvas id="fuelOverTimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-plane me-2"></i>Total Fuel Savings by Aircraft
+                    </div>
+                    <div class="card-body">
+                        <canvas id="fuelByAircraftChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-route me-2"></i>Fuel Uplift by Route
+                    </div>
+                    <div class="card-body">
+                        <canvas id="fuelByRouteChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar me-2"></i>Fuel Statistics
+                    </div>
+                    <div class="card-body">
+                        <canvas id="fuelStatsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="summarySection" class="row g-4 mb-5">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-list-alt me-2"></i>Fuel Summary
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="p-3 bg-orange-light rounded shadow-sm">
+                                    <div class="text-uppercase small text-muted">CFP B/O</div>
+                                    <div class="h5" id="cfpBoValue">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-orange-light rounded shadow-sm">
+                                    <div class="text-uppercase small text-muted">ACT B/O</div>
+                                    <div class="h5" id="actBoValue">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="p-3 bg-orange-light rounded shadow-sm">
+                                    <div class="text-uppercase small text-muted">Fuel Uplift</div>
+                                    <div class="h5" id="fuelUpliftValue">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-orange-light rounded shadow-sm">
+                                    <div class="text-uppercase small text-muted">Off Chock</div>
+                                    <div class="h5" id="offChockValue">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-orange-light rounded shadow-sm">
+                            <div class="text-uppercase small text-muted">Delta</div>
+                            <div class="h5" id="deltaValue">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie me-2"></i>Burn Distribution
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Actual Fuel Burn vs OFP</th>
+                                        <th>Flights</th>
+                                        <th>% Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="burnDistributionTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4" style="display: none;">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-clock me-2"></i>Month Overview
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-2"><strong>Month:</strong> <span id="summaryMonth">-</span></p>
+                        <p class="text-muted mb-2"><strong>% Fuel Saved:</strong> <span id="fuelSavedValue">-</span></p>
+                        <p class="text-muted mb-2"><strong>Avg Off Chocks:</strong> <span id="avgOffChocksValue">-</span></p>
+                        <p class="text-muted mb-0"><strong>Avg Fuel Burn:</strong> <span id="avgFuelBurnValue">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-route me-2"></i>Sector Fuel Burn Summary
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Sector</th>
+                                        <th>ACT Burn Off</th>
+                                        <th>No. of Flights</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sectorFuelTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="flightTable" class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th><i class="fas fa-calendar me-1"></i>Date</th>
+                        <th><i class="fas fa-file-contract me-1"></i>Report No</th>
+                        <th><i class="fas fa-hashtag me-1"></i>Flight No</th>
+                        <th><i class="fas fa-plane me-1"></i>Aircraft</th>
+                        <th><i class="fas fa-map-marker-alt me-1"></i>From</th>
+                        <th><i class="fas fa-map-marker me-1"></i>To</th>
+                        <th><i class="fas fa-clock me-1"></i>STD</th>
+                        <th><i class="fas fa-clock me-1"></i>STA</th>
+                        <th><i class="fas fa-hourglass-half me-1"></i>Block Time</th>
+                        <th><i class="fas fa-fire me-1"></i>Total Fuel Burn</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+    </div>
+
+        <!-- Dashboard Footer -->
+        <div class="dashboard-footer">
+            <p>Analysis by <span class="footer-text-bold">NavDoc & Tech, Technical & Development</span></p>
+        </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        function clearActiveNav() {
+            document.getElementById('nav-myapps').classList.remove('active');
+            document.getElementById('nav-fuel').classList.remove('active');
+            document.getElementById('nav-delay').classList.remove('active');
+            document.getElementById('nav-database').classList.remove('active');
+            document.getElementById('nav-willaddlater').classList.remove('active');
+        }
+
+        function showLauncher() {
+            clearActiveNav();
+            document.getElementById('nav-myapps').classList.add('active');
+            document.getElementById('launcherSection').style.display = 'block';
+            document.getElementById('analysisContent').style.display = 'none';
+            document.getElementById('delayCodeContent').style.display = 'none';
+            document.getElementById('databaseContent').style.display = 'none';
+            document.getElementById('willAddLaterContent').style.display = 'none';
+            
+            // Update Page Title
+            document.getElementById('pageTitle').textContent = 'FY Navdoc & Tech Dashboard';
+            document.getElementById('pageSubtitle').style.display = 'none';
+        }
+
+        function showFuelAnalysis() {
+            clearActiveNav();
+            document.getElementById('nav-fuel').classList.add('active');
+            document.getElementById('launcherSection').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'block';
+            document.getElementById('delayCodeContent').style.display = 'none';
+            document.getElementById('databaseContent').style.display = 'none';
+            document.getElementById('willAddLaterContent').style.display = 'none';
+            
+            // Update Page Title
+            document.getElementById('pageTitle').textContent = 'Fuel Analysis';
+            document.getElementById('pageSubtitle').textContent = 'View fuel performance and savings';
+            document.getElementById('pageSubtitle').style.display = 'block';
+            
+            document.getElementById('fuelAnalysis').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showDelayCodeAnalysis() {
+            clearActiveNav();
+            document.getElementById('nav-delay').classList.add('active');
+            document.getElementById('launcherSection').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'none';
+            document.getElementById('delayCodeContent').style.display = 'block';
+            document.getElementById('databaseContent').style.display = 'none';
+            document.getElementById('willAddLaterContent').style.display = 'none';
+            
+            // Update Page Title
+            document.getElementById('pageTitle').textContent = 'Delay Code Analysis';
+            document.getElementById('pageSubtitle').textContent = 'Analyze delay codes and root causes';
+            document.getElementById('pageSubtitle').style.display = 'block';
+            
+            // Initialize delay analysis
+            initializeDelayAnalysis();
+        }
+
+        // Delay Code Analysis Variables
+        let currentDelayFleet = 'b737';
+        let currentDelayPeriod = 'monthly';
+        let currentDelayMonth = '01';
+        let currentDelayQuarter = '1';
+        let currentDelayYear = '2026';
+        let depDelayChart, arrDelayChart;
+
+        // Standard Delay Code Mapping
+        const delayCodeMapping = {
+            'DC-01': 'OPERATIONAL REQUIREMENTS',
+            'DC-02': 'FLIGHT OPERATIONS / CREW / OCC',
+            'DC-03': 'PASSENGER / BAGGAGES',
+            'DC-04': 'INFLIGHT SERVICES / CATERING',
+            'DC-05': 'CARGO',
+            'DC-06': 'GROUND OPERATIONS',
+            'DC-07': 'ENGINEERING',
+            'DC-08': 'AIRPORT AUTHORITIES / CUSTOMS IMMIGRATION QUARANTINE (CIQ)',
+            'DC-09': 'AIR TRAFFIC SERVICE (ATS)',
+            'DC-10': 'WEATHER',
+            'DC-11': 'INSUFFICIENT BLOCK TIME',
+            'DC-12': 'CONSEQUENTIAL',
+            'DC-13': 'OTHERS (SEE CAPTAIN\'S REPORT)'
+        };
+
+        const delayCodeSubMapping = {
+            'DC-01-A': 'A - Aircraft defect (DC-01)',
+            'DC-01-B': 'B - Aircraft technical issue in flight (DC-01)',
+            'DC-01-C': 'C - Aircraft swap due to technical (DC-01)',
+            'DC-01-D': 'D - Aircraft reposition (DC-01)',
+            'DC-01-E': 'E - Diversion (DC-01)',
+            'DC-01-F': 'F - Others (refer captain\'s report) (DC-01)',
+            'DC-02-A': 'A - Change of flight plan (DC-02)',
+            'DC-02-B': 'B - Late flight crew boarding (DC-02)',
+            'DC-02-C': 'C - Late cabin crew boarding (DC-02)',
+            'DC-02-D': 'D - Crew change (DC-02)',
+            'DC-02-E': 'E - Others (refer captain\'s report) (DC-02)',
+            'DC-03-A': 'A - Late completion of boarding (DC-03)',
+            'DC-03-B': 'B - PRM (pax with reduced mobility) handling (DC-03)',
+            'DC-03-C': 'C - Disruptive pax (DC-03)',
+            'DC-03-D': 'D - Medical issue pax (DC-03)',
+            'DC-03-E': 'E - Pax seating issue (DC-03)',
+            'DC-03-F': 'F - Cabin baggage oversize (DC-03)',
+            'DC-03-G': 'G - Baggage offload due to pax no show (DC-03)',
+            'DC-03-H': 'H - Others (refer captain\'s report) (DC-03)',
+            'DC-04-A': 'A - Breakdown of catering equipment (DC-04)',
+            'DC-04-B': 'B - Lack of/Late catering equipment or staff (DC-04)',
+            'DC-04-C': 'C - Wrong/Missing catering (DC-04)',
+            'DC-04-D': 'D - Others (refer captain\'s report) (DC-04)',
+            'DC-05-A': 'A - Cargo documentation error (DC-05)',
+            'DC-05-B': 'B - Cargo load discrepancies (DC-05)',
+            'DC-05-C': 'C - High load of cargo (DC-05)',
+            'DC-05-D': 'D - Late arrival of cargo personnel (DC-05)',
+            'DC-05-E': 'E - Others (refer captain\'s report) (DC-05)',
+            'DC-06-A': 'A - Multiple boarding (DC-06)',
+            'DC-06-B': 'B - Late arrival of load sheet (DC-06)',
+            'DC-06-C': 'C - Waiting for marshaller for docking (DC-06)',
+            'DC-06-D': 'D - Aerobridge issues (DC-06)',
+            'DC-06-E': 'E - LMC Loadsheet (DC-06)',
+            'DC-06-F': 'F - Others (refer captain\'s report) (DC-06)',
+            'DC-07-A': 'A - Lack of engineering personnel (DC-07)',
+            'DC-07-B': 'B - More time required to rectify aircraft defect (DC-07)',
+            'DC-07-C': 'C - Aircraft defect on ground (DC-07)',
+            'DC-07-D': 'D - Others (refer captain\'s report) (DC-07)',
+            'DC-08-A': 'A - Custom checks (DC-08)',
+            'DC-08-B': 'B - Airport closure (DC-08)',
+            'DC-08-C': 'C - VIP/Military exercise (DC-08)',
+            'DC-08-D': 'D - Runway closure (DC-08)',
+            'DC-08-E': 'E - Late immigration clearance (DC-08)',
+            'DC-08-F': 'F - Others (refer captain\'s report) (DC-08)',
+            'DC-09-A': 'A - Sequence for pushback (DC-09)',
+            'DC-09-B': 'B - Sequence for departure (DC-09)',
+            'DC-09-C': 'C - Sequence for arrival (DC-09)',
+            'DC-09-D': 'D - ATC restriction (DC-09)',
+            'DC-09-E': 'E - Radar vector (DC-09)',
+            'DC-09-F': 'F - Others (refer captain\'s report) (DC-09)'
+        };
+
+        function getDelayCodeReason(code) {
+            return delayCodeMapping[code] || delayCodeSubMapping[code] || code;
+        }
+
+        // Mapping of subcategories for each delay code
+        const delayCodeSubcategories = {
+            'DC-01': ['A', 'B', 'C', 'D', 'E', 'F'],
+            'DC-02': ['A', 'B', 'C', 'D', 'E'],
+            'DC-03': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+            'DC-04': ['A', 'B', 'C', 'D'],
+            'DC-05': ['A', 'B', 'C', 'D', 'E'],
+            'DC-06': ['A', 'B', 'C', 'D', 'E', 'F'],
+            'DC-07': ['A', 'B', 'C', 'D'],
+            'DC-08': ['A', 'B', 'C', 'D', 'E', 'F'],
+            'DC-09': ['A', 'B', 'C', 'D', 'E', 'F'],
+            'DC-10': [],
+            'DC-11': [],
+            'DC-12': [],
+            'DC-13': []
+        };
+
+        // Initialize year selector on page load
+        function initializeYearSelector() {
+            const yearSelect = document.getElementById('delayYearSelect');
+            const currentYear = new Date().getFullYear();
+            yearSelect.innerHTML = '';
+            for (let year = 2000; year <= 2100; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === 2026) {
+                    option.selected = true;
+                }
+                yearSelect.appendChild(option);
+            }
+        }
+
+        async function initializeDelayAnalysis() {
+            // Initialize year selector
+            initializeYearSelector();
+            // Load flight data from uploaded CSV
+            updateDelayAnalysis();
+        }
+
+        async function loadFlightDataForDelay() {
+            try {
+                let allData = [];
+                let fleetPrefixes = [];
+                let monthsToLoad = [];
+
+                // Determine fleet prefixes
+                if (currentDelayFleet === 'both') {
+                    fleetPrefixes = ['b737', 'atr'];
+                } else if (currentDelayFleet === 'atr72') {
+                    fleetPrefixes = ['atr'];
+                } else {
+                    fleetPrefixes = ['b737'];
+                }
+
+                // Determine months to load based on period
+                if (currentDelayPeriod === 'monthly') {
+                    monthsToLoad = [currentDelayMonth];
+                } else if (currentDelayPeriod === 'quarterly') {
+                    monthsToLoad = getQuarterMonths(currentDelayQuarter);
+                } else if (currentDelayPeriod === 'yearly') {
+                    monthsToLoad = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+                }
+
+                // Load data for all fleets and months
+                for (let fleetPrefix of fleetPrefixes) {
+                    for (let month of monthsToLoad) {
+                        const key = fleetPrefix + '_' + month + '_' + currentDelayYear;
+                        const data = await getFlightData(key);
+                        if (data && data.length > 0) {
+                            allData = [...allData, ...data];
+                        }
+                    }
+                }
+
+                return allData || [];
+            } catch (error) {
+                console.error('Error loading flight data:', error);
+                return [];
+            }
+        }
+
+        function getQuarterMonths(quarter) {
+            const q = parseInt(quarter);
+            if (q === 1) return ['01', '02', '03'];
+            if (q === 2) return ['04', '05', '06'];
+            if (q === 3) return ['07', '08', '09'];
+            return ['10', '11', '12'];
+        }
+
+        function setDelayPeriod(period) {
+            currentDelayPeriod = period;
+            
+            const monthSelector = document.getElementById('delayMonthSelector');
+            const quarterSelector = document.getElementById('delayQuarterSelector');
+            
+            if (period === 'monthly') {
+                monthSelector.style.display = 'block';
+                quarterSelector.style.display = 'none';
+                currentDelayMonth = document.getElementById('delayMonthSelect').value;
+            } else if (period === 'quarterly') {
+                monthSelector.style.display = 'none';
+                quarterSelector.style.display = 'block';
+                currentDelayQuarter = document.getElementById('delayQuarterSelect').value || '1';
+            } else if (period === 'yearly') {
+                monthSelector.style.display = 'none';
+                quarterSelector.style.display = 'none';
+                currentDelayMonth = '01';
+            }
+            
+            updateDelayAnalysis();
+        }
+
+        function updateDelayAnalysis() {
+            currentDelayFleet = document.getElementById('delayFleetSelect').value;
+            currentDelayYear = document.getElementById('delayYearSelect').value;
+            
+            if (currentDelayPeriod === 'monthly') {
+                currentDelayMonth = document.getElementById('delayMonthSelect').value;
+            } else if (currentDelayPeriod === 'quarterly') {
+                currentDelayQuarter = document.getElementById('delayQuarterSelect').value || '1';
+            }
+            
+            // Update title with current selections
+            updateDelayTitle();
+            
+            loadFlightDataForDelay().then(data => {
+                const filtered = filterDelayData(data);
+                calculateDelayMetrics(filtered);
+                updateDelayTables(filtered);
+                updateDelayCharts(filtered);
+                updateSectorAnalysis(filtered);
+                updateTopDelayCodesAnalysis(filtered);
+                updateDelayCodeReference(filtered);
+            });
+        }
+
+        function updateDelayTitle() {
+            let titleText = '';
+            
+            if (currentDelayPeriod === 'monthly') {
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const monthName = monthNames[parseInt(currentDelayMonth) - 1];
+                titleText = monthName + ' ' + currentDelayYear;
+            } else if (currentDelayPeriod === 'quarterly') {
+                titleText = 'Q' + currentDelayQuarter + ' ' + currentDelayYear;
+            } else if (currentDelayPeriod === 'yearly') {
+                titleText = 'Year ' + currentDelayYear;
+            }
+            
+            document.getElementById('delayPeriodTitle').textContent = titleText;
+        }
+
+        function filterDelayData(data) {
+            // Filter to only include flights with delay codes (departure or arrival)
+            return data.filter(flight => {
+                const depCode = flight['Delay Code (Dep)'];
+                const arrCode = flight['Delay Code (Arr)'];
+                return (depCode && depCode.trim()) || (arrCode && arrCode.trim());
+            });
+        }
+
+        function calculateDelayMetrics(data) {
+            let totalDelayed = 0;
+            let totalDelayMinutes = 0;
+            const depCodes = {};
+            const arrCodes = {};
+
+            data.forEach(flight => {
+                const depCode = (flight['Delay Code (Dep)'] || '').trim();
+                const arrCode = (flight['Delay Code (Arr)'] || '').trim();
+                const totalDelay = flight['Total Delays'] || '0:00';
+
+                if (depCode || arrCode) {
+                    totalDelayed++;
+                    const delayParts = totalDelay.split(':');
+                    const hours = parseInt(delayParts[0]) || 0;
+                    const minutes = parseInt(delayParts[1]) || 0;
+                    totalDelayMinutes += (hours * 60) + minutes;
+                }
+
+                // Handle departure codes (including comma-separated)
+                if (depCode) {
+                    const codes = depCode.split(',').map(c => c.trim()).filter(c => c);
+                    codes.forEach(code => {
+                        depCodes[code] = (depCodes[code] || 0) + 1;
+                    });
+                }
+                
+                // Handle arrival codes (including comma-separated)
+                if (arrCode) {
+                    const codes = arrCode.split(',').map(c => c.trim()).filter(c => c);
+                    codes.forEach(code => {
+                        arrCodes[code] = (arrCodes[code] || 0) + 1;
+                    });
+                }
+            });
+
+            document.getElementById('totalDelayedFlights').textContent = totalDelayed;
+
+            const avgHours = Math.floor((totalDelayMinutes / (totalDelayed || 1)) / 60);
+            const avgMinutes = Math.round((totalDelayMinutes / (totalDelayed || 1)) % 60);
+            document.getElementById('avgDelayTime').textContent = `${avgHours}:${String(avgMinutes).padStart(2, '0')}`;
+
+            const mostDepCode = Object.keys(depCodes).length > 0 ? 
+                Object.keys(depCodes).reduce((a, b) => depCodes[a] > depCodes[b] ? a : b) : '-';
+            const mostArrCode = Object.keys(arrCodes).length > 0 ? 
+                Object.keys(arrCodes).reduce((a, b) => arrCodes[a] > arrCodes[b] ? a : b) : '-';
+
+            // Calculate total frequencies
+            const totalDepFrequency = Object.values(depCodes).reduce((sum, val) => sum + val, 0);
+            const totalArrFrequency = Object.values(arrCodes).reduce((sum, val) => sum + val, 0);
+            const depFrequency = mostDepCode !== '-' ? depCodes[mostDepCode] : 0;
+            const arrFrequency = mostArrCode !== '-' ? arrCodes[mostArrCode] : 0;
+
+            document.getElementById('mostCommonDep').textContent = mostDepCode ? (mostDepCode + ' - ' + getDelayCodeReason(mostDepCode)) : '-';
+            document.getElementById('mostCommonArr').textContent = mostArrCode ? (mostArrCode + ' - ' + getDelayCodeReason(mostArrCode)) : '-';
+            document.getElementById('depFrequency').textContent = mostDepCode !== '-' ? `${depFrequency} of ${totalDepFrequency}` : '-';
+            document.getElementById('arrFrequency').textContent = mostArrCode !== '-' ? `${arrFrequency} of ${totalArrFrequency}` : '-';
+        }
+
+        function updateDelayTables(data) {
+            const depDelays = {};
+            const arrDelays = {};
+            const depReasons = {};  // Separate reason tracking for departure
+            const arrReasons = {};  // Separate reason tracking for arrival
+
+            data.forEach(flight => {
+                const depCode = flight['Delay Code (Dep)'];
+                const depReason = flight['Delay Reason (Dep)'];
+                const arrCode = flight['Delay Code (Arr)'];
+                const arrReason = flight['Delay Reason (Arr)'];
+
+                // Handle departure delays (including comma-separated codes)
+                if (depCode) {
+                    const depCodes = depCode.split(',').map(c => c.trim()).filter(c => c);
+                    
+                    // Count each code separately
+                    depCodes.forEach(code => {
+                        if (!depDelays[code]) {
+                            depDelays[code] = { reason: '', count: 0 };
+                            depReasons[code] = {};
+                        }
+                        depDelays[code].count++;
+                    });
+                    
+                    // Track reason frequency - only count it once per flight record
+                    if (depReason) {
+                        // Try to extract which code this reason belongs to from the reason string
+                        let targetCode = depCodes[0]; // Default to first code
+                        
+                        // Check if reason contains a code pattern like (DC-XX)
+                        const codeMatch = depReason.match(/\(DC-\d+\)/);
+                        if (codeMatch) {
+                            const extractedCode = codeMatch[0].slice(1, -1); // Remove parentheses
+                            if (depCodes.includes(extractedCode)) {
+                                targetCode = extractedCode;
+                            }
+                        }
+                        
+                        depReasons[targetCode][depReason] = (depReasons[targetCode][depReason] || 0) + 1;
+                    } else {
+                        // If no reason provided, assign lookup reason to each code
+                        depCodes.forEach(code => {
+                            const reason = getDelayCodeReason(code) || 'N/A';
+                            depReasons[code][reason] = (depReasons[code][reason] || 0) + 1;
+                        });
+                    }
+                }
+
+                // Handle arrival delays (including comma-separated codes)
+                if (arrCode) {
+                    const arrCodes = arrCode.split(',').map(c => c.trim()).filter(c => c);
+                    
+                    // Count each code separately
+                    arrCodes.forEach(code => {
+                        if (!arrDelays[code]) {
+                            arrDelays[code] = { reason: '', count: 0 };
+                            arrReasons[code] = {};
+                        }
+                        arrDelays[code].count++;
+                    });
+                    
+                    // Track reason frequency - only count it once per flight record
+                    if (arrReason) {
+                        // Try to extract which code this reason belongs to from the reason string
+                        let targetCode = arrCodes[0]; // Default to first code
+                        
+                        // Check if reason contains a code pattern like (DC-XX)
+                        const codeMatch = arrReason.match(/\(DC-\d+\)/);
+                        if (codeMatch) {
+                            const extractedCode = codeMatch[0].slice(1, -1); // Remove parentheses
+                            if (arrCodes.includes(extractedCode)) {
+                                targetCode = extractedCode;
+                            }
+                        }
+                        
+                        arrReasons[targetCode][arrReason] = (arrReasons[targetCode][arrReason] || 0) + 1;
+                    } else {
+                        // If no reason provided, assign lookup reason to each code
+                        arrCodes.forEach(code => {
+                            const reason = getDelayCodeReason(code) || 'N/A';
+                            arrReasons[code][reason] = (arrReasons[code][reason] || 0) + 1;
+                        });
+                    }
+                }
+            });
+
+            populateDelayTable('depDelayTable', depDelays, depReasons, data.length);
+            populateDelayTable('arrDelayTable', arrDelays, arrReasons, data.length);
+        }
+
+        function populateDelayTable(tableId, delays, delayReasons, totalFlights) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            tbody.innerHTML = '';
+
+            // Sort delays by count (most frequent first)
+            const sortedDelays = Object.entries(delays)
+                .sort((a, b) => b[1].count - a[1].count);
+
+            sortedDelays.forEach(([code, info]) => {
+                // Get category name
+                const categoryName = delayCodeMapping[code] || 'Unknown';
+                const codeWithCategory = `${code} - ${categoryName}`;
+                
+                // Find the most common reason for this delay code
+                const reasons = delayReasons[code] || {};
+                const mostCommonReason = Object.entries(reasons)
+                    .sort((a, b) => b[1] - a[1])[0];
+                const reasonText = mostCommonReason ? mostCommonReason[0] : getDelayCodeReason(code) || 'N/A';
+                const reasonFreq = mostCommonReason ? mostCommonReason[1] : 0;
+
+                const percentage = ((info.count / totalFlights) * 100).toFixed(1);
+                const row = `
+                    <tr>
+                        <td><strong>${codeWithCategory}</strong></td>
+                        <td>${reasonText}</td>
+                        <td><strong>${info.count}</strong></td>
+                        <td>${percentage}%</td>
+                        <td>${reasonFreq}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function updateSectorAnalysis(data) {
+            const depSectors = {};
+            const arrSectors = {};
+
+            data.forEach(flight => {
+                const from = flight['From'] ? flight['From'].trim() : '';
+                const to = flight['To'] ? flight['To'].trim() : '';
+                const depCode = flight['Delay Code (Dep)'];
+                const arrCode = flight['Delay Code (Arr)'];
+
+                // Count departure sectors with delay codes
+                if (depCode && depCode.trim() && from && to) {
+                    const sector = `${from}-${to}`;
+                    depSectors[sector] = (depSectors[sector] || 0) + 1;
+                }
+
+                // Count arrival sectors with delay codes
+                if (arrCode && arrCode.trim() && from && to) {
+                    const sector = `${from}-${to}`;
+                    arrSectors[sector] = (arrSectors[sector] || 0) + 1;
+                }
+            });
+
+            populateSectorTable('depSectorTable', depSectors);
+            populateSectorTable('arrSectorTable', arrSectors);
+        }
+
+        function populateSectorTable(tableId, sectors) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            tbody.innerHTML = '';
+
+            // Get top 5 sectors
+            const topSectors = Object.entries(sectors)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            topSectors.forEach(([sector, count]) => {
+                const row = `
+                    <tr>
+                        <td><strong>${sector}</strong></td>
+                        <td>${count}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function updateTopDelayCodesAnalysis(data) {
+            // First, get top 5 sectors for departure and arrival
+            const depSectorsMap = {};
+            const arrSectorsMap = {};
+            
+            data.forEach(flight => {
+                const from = flight['From'] ? flight['From'].trim() : '';
+                const to = flight['To'] ? flight['To'].trim() : '';
+                const depCode = flight['Delay Code (Dep)'];
+                const arrCode = flight['Delay Code (Arr)'];
+                
+                if (depCode && depCode.trim() && from && to) {
+                    const sector = `${from}-${to}`;
+                    depSectorsMap[sector] = (depSectorsMap[sector] || 0) + 1;
+                }
+                
+                if (arrCode && arrCode.trim() && from && to) {
+                    const sector = `${from}-${to}`;
+                    arrSectorsMap[sector] = (arrSectorsMap[sector] || 0) + 1;
+                }
+            });
+            
+            // Get top 5 sectors for each (in order of frequency)
+            const topDepSectorsOrdered = Object.entries(depSectorsMap)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([sector, _]) => sector);
+            
+            const topArrSectorsOrdered = Object.entries(arrSectorsMap)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([sector, _]) => sector);
+            
+            // Now count delay codes by sector for top 5 departure sectors
+            const depCodesWithSector = {};
+            const arrCodesWithSector = {};
+            
+            data.forEach(flight => {
+                const from = flight['From'] ? flight['From'].trim() : '';
+                const to = flight['To'] ? flight['To'].trim() : '';
+                const sector = `${from}-${to}`;
+                const depCode = (flight['Delay Code (Dep)'] || '').trim();
+                const arrCode = (flight['Delay Code (Arr)'] || '').trim();
+                
+                // Count departure codes only if in top 5 departure sectors
+                if (depCode && topDepSectorsOrdered.includes(sector)) {
+                    const codes = depCode.split(',').map(c => c.trim()).filter(c => c);
+                    codes.forEach(code => {
+                        const key = `${sector}|${code}`;
+                        depCodesWithSector[key] = (depCodesWithSector[key] || 0) + 1;
+                    });
+                }
+                
+                // Count arrival codes only if in top 5 arrival sectors
+                if (arrCode && topArrSectorsOrdered.includes(sector)) {
+                    const codes = arrCode.split(',').map(c => c.trim()).filter(c => c);
+                    codes.forEach(code => {
+                        const key = `${sector}|${code}`;
+                        arrCodesWithSector[key] = (arrCodesWithSector[key] || 0) + 1;
+                    });
+                }
+            });
+            
+            populateTopCodesTable('topDepCodesTable', depCodesWithSector, topDepSectorsOrdered);
+            populateTopCodesTable('topArrCodesTable', arrCodesWithSector, topArrSectorsOrdered);
+        }
+
+        function populateTopCodesTable(tableId, codesWithSector, sectorOrder) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            tbody.innerHTML = '';
+
+            // Convert to array and sort by sector first, then by frequency
+            const codesArray = Object.entries(codesWithSector).map(([key, count]) => {
+                const [sector, code] = key.split('|');
+                return { sector, code, count };
+            }).sort((a, b) => {
+                if (a.sector !== b.sector) {
+                    return sectorOrder.indexOf(a.sector) - sectorOrder.indexOf(b.sector);
+                }
+                return b.count - a.count;
+            });
+
+            // Get only the top 1 (highest frequency) delay code per sector
+            const topPerSector = {};
+            codesArray.forEach(({ sector, code, count }) => {
+                if (!topPerSector[sector]) {
+                    topPerSector[sector] = { code, count };
+                }
+            });
+
+            // Display in sector order
+            sectorOrder.forEach(sector => {
+                if (topPerSector[sector]) {
+                    const { code, count } = topPerSector[sector];
+                    const row = `
+                        <tr>
+                            <td><strong>${sector}</strong></td>
+                            <td><strong>${code}</strong></td>
+                            <td>${count}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                }
+            });
+        }
+
+        function updateDelayCharts(data) {
+            const depCodes = {};
+            const arrCodes = {};
+
+            data.forEach(flight => {
+                const depCode = flight['Delay Code (Dep)'];
+                const arrCode = flight['Delay Code (Arr)'];
+
+                // Handle departure codes (including comma-separated)
+                if (depCode) {
+                    const codes = depCode.split(',').map(c => c.trim()).filter(c => c);
+                    codes.forEach(code => {
+                        depCodes[code] = (depCodes[code] || 0) + 1;
+                    });
+                }
+                
+                // Handle arrival codes (including comma-separated)
+                if (arrCode) {
+                    const codes = arrCode.split(',').map(c => c.trim()).filter(c => c);
+                    codes.forEach(code => {
+                        arrCodes[code] = (arrCodes[code] || 0) + 1;
+                    });
+                }
+            });
+
+            createDelayChart('depDelayChart', depCodes, 'Departure');
+            createDelayChart('arrDelayChart', arrCodes, 'Arrival');
+            createDelayBarChart('depDelayBarChart', depCodes, 'Departure');
+            createDelayBarChart('arrDelayBarChart', arrCodes, 'Arrival');
+        }
+
+        function createDelayChart(canvasId, codes, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (window[canvasId + '_instance']) {
+                window[canvasId + '_instance'].destroy();
+            }
+
+            const colors = ['#FF8C00', '#FFB74D', '#FF9F1A', '#FFA500', '#FF7F50', '#FF6347', '#FF4500'];
+            
+            window[canvasId + '_instance'] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(codes),
+                    datasets: [{
+                        data: Object.values(codes),
+                        backgroundColor: colors.slice(0, Object.keys(codes).length),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 12, weight: 'bold' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDelayBarChart(canvasId, codes, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (window[canvasId + '_instance']) {
+                window[canvasId + '_instance'].destroy();
+            }
+
+            const colors = '#FF8C00';
+            
+            window[canvasId + '_instance'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(codes),
+                    datasets: [{
+                        label: label + ' Codes',
+                        data: Object.values(codes),
+                        backgroundColor: colors,
+                        borderColor: '#FF6B35',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                padding: 15,
+                                font: { size: 12, weight: 'bold' }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDelayCodeReference(data) {
+            const depCodes = {};
+            const arrCodes = {};
+            
+            // Count all delay codes separately for DEP and ARR
+            data.forEach(flight => {
+                const depCode = (flight['Delay Code (Dep)'] || '').trim();
+                const depReason = (flight['Delay Reason (Dep)'] || '').trim();
+                const arrCode = (flight['Delay Code (Arr)'] || '').trim();
+                const arrReason = (flight['Delay Reason (Arr)'] || '').trim();
+
+                // Process Departure codes
+                if (depCode) {
+                    const codes = depCode.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
+                    codes.forEach(code => {
+                        // For DC-10 to DC-13, count as main code
+                        if (code === 'DC-10' || code === 'DC-11' || code === 'DC-12' || code === 'DC-13') {
+                            depCodes[code] = (depCodes[code] || 0) + 1;
+                        } else {
+                            // For other codes, try to extract subcategory letter from reason
+                            let fullCode = code;
+                            if (depReason) {
+                                // Reason format: "A - Description (DC-XX)"
+                                const match = depReason.match(/^([A-Z])\s*-/);
+                                if (match) {
+                                    fullCode = code + '-' + match[1];
+                                }
+                            }
+                            depCodes[fullCode] = (depCodes[fullCode] || 0) + 1;
+                        }
+                    });
+                }
+                
+                // Process Arrival codes
+                if (arrCode) {
+                    const codes = arrCode.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
+                    codes.forEach(code => {
+                        // For DC-10 to DC-13, count as main code
+                        if (code === 'DC-10' || code === 'DC-11' || code === 'DC-12' || code === 'DC-13') {
+                            arrCodes[code] = (arrCodes[code] || 0) + 1;
+                        } else {
+                            // For other codes, try to extract subcategory letter from reason
+                            let fullCode = code;
+                            if (arrReason) {
+                                // Reason format: "A - Description (DC-XX)"
+                                const match = arrReason.match(/^([A-Z])\s*-/);
+                                if (match) {
+                                    fullCode = code + '-' + match[1];
+                                }
+                            }
+                            arrCodes[fullCode] = (arrCodes[fullCode] || 0) + 1;
+                        }
+                    });
+                }
+            });
+
+            // Populate DEP table
+            populateDetailedCodeTable('depDetailedCodeTable', depCodes, 'DEP');
+            // Populate ARR table
+            populateDetailedCodeTable('arrDetailedCodeTable', arrCodes, 'ARR');
+        }
+
+        function populateDetailedCodeTable(tableId, codes, type) {
+            const tbody = document.querySelector('#' + tableId + ' tbody');
+            tbody.innerHTML = '';
+
+            // Sort delay codes by code number
+            const sortedBaseCodes = Object.keys(delayCodeMapping).sort((a, b) => {
+                const numA = parseInt(a.substring(3));
+                const numB = parseInt(b.substring(3));
+                return numA - numB;
+            });
+
+            sortedBaseCodes.forEach((baseCode) => {
+                const categoryName = delayCodeMapping[baseCode] || 'Unknown';
+                const subcats = delayCodeSubcategories[baseCode] || [];
+                
+                // For DC-10 to DC-13 (no subcategories), show as single row
+                if (subcats.length === 0) {
+                    const frequency = codes[baseCode] || 0;
+                    const row = `
+                        <tr style="background-color: #E8F5E9;">
+                            <td><strong>${baseCode}</strong></td>
+                            <td><strong>${categoryName}</strong></td>
+                            <td><strong>${frequency}</strong></td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                } else {
+                    // For codes with subcategories
+                    // Calculate total frequency for this category
+                    let totalFrequency = 0;
+                    subcats.forEach(subcat => {
+                        const fullCode = baseCode + '-' + subcat;
+                        totalFrequency += codes[fullCode] || 0;
+                    });
+
+                    // Add category row with background
+                    const categoryRow = `
+                        <tr style="background-color: #E8F5E9; font-weight: bold;">
+                            <td><strong>${baseCode}</strong></td>
+                            <td><strong>${categoryName}</strong></td>
+                            <td><strong>${totalFrequency}</strong></td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += categoryRow;
+
+                    // Add ALL subcategory rows (even if frequency is 0)
+                    subcats.forEach(subcat => {
+                        const fullCode = baseCode + '-' + subcat;
+                        const frequency = codes[fullCode] || 0;
+                        const subDescription = delayCodeSubMapping[fullCode] || fullCode;
+                        const subRow = `
+                            <tr>
+                                <td style="padding-left: 40px;">└─ ${fullCode}</td>
+                                <td>${subDescription}</td>
+                                <td>${frequency}</td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += subRow;
+                    });
+                }
+            });
+        }
+
+        function showDatabase() {
+            clearActiveNav();
+            document.getElementById('nav-database').classList.add('active');
+            document.getElementById('launcherSection').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'none';
+            document.getElementById('delayCodeContent').style.display = 'none';
+            document.getElementById('databaseContent').style.display = 'block';
+            document.getElementById('willAddLaterContent').style.display = 'none';
+            
+            // Update Page Title
+            document.getElementById('pageTitle').textContent = 'Database';
+            document.getElementById('pageSubtitle').textContent = 'Access the database interface for flight data';
+            document.getElementById('pageSubtitle').style.display = 'block';
+        }
+
+        function showWillAddLater() {
+            clearActiveNav();
+            document.getElementById('nav-willaddlater').classList.add('active');
+            document.getElementById('launcherSection').style.display = 'none';
+            document.getElementById('analysisContent').style.display = 'none';
+            document.getElementById('delayCodeContent').style.display = 'none';
+            document.getElementById('databaseContent').style.display = 'none';
+            document.getElementById('willAddLaterContent').style.display = 'block';
+            
+            // Update Page Title
+            document.getElementById('pageTitle').textContent = 'Coming Soon';
+            document.getElementById('pageSubtitle').textContent = 'A new dashboard module will be added in the next update';
+            document.getElementById('pageSubtitle').style.display = 'block';
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+    </script>
+</body>
+</html>
